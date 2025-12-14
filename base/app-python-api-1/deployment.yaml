@@ -32,11 +32,6 @@ spec:
             - |
               python /app/client-1.py
               # Ejecuta el script Python directamente (sin instalar requests)
-          env:
-            - name: SERVICE_URL
-              # Variable de entorno para la URL del servicio destino
-              value: "http://echo-server-svc"
-              # Valor por defecto, puede ser sobrescrito en overlays
           volumeMounts:
             - name: script
               # Nombre del volumen a montar

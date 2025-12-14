@@ -5,24 +5,27 @@ kind: Kustomization
 # En el overlay kustomization.yaml
 
 resources:
-  - ../../../base/app-python-api-1
+- ../../../base/app-python-api-1
 
 # Namespace específico: app + entorno
 namespace: python-api-1-dev
 
 # Labels del entorno
-commonLabels:
-  environment: dev
 
 # Patches específicos para dev
-patchesStrategicMerge:
-  - |-
+labels:
+- includeSelectors: true
+  pairs:
+    environment: dev
+patches:
+- patch: |-
     apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: python-api-1-deploy
     spec:
       replicas: 1
+      revisionHistoryLimit: 3
       template:
         spec:
           containers:
