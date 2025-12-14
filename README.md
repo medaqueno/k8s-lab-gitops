@@ -56,9 +56,25 @@ kubectl apply -k overlays/prod/python-api-1/
 
 ## 🔄 Gestión de Despliegues
 
+### Aplicar Cambios en Manifestos
+
+Cuando modifiques los archivos base (deployment.yaml, configmap.yaml, etc.), aplica los cambios:
+
+```bash
+# Método 1: Usar kubectl apply con kustomize (recomendado para cambios en manifests)
+kustomize build overlays/dev/python-api-1/ | kubectl apply -f -
+
+# Método 2: Usar kubectl apply directamente con -k (más corto)
+kubectl apply -k overlays/dev/python-api-1/
+```
+
+**Cuándo usar cada método**:
+- `kustomize build | kubectl apply`: Cuando quieres ver el YAML generado antes de aplicar
+- `kubectl apply -k`: Para aplicaciones rápidas sin ver el YAML intermedio
+
 ### Reiniciar Pods (Método Recomendado)
 
-Usa `kubectl rollout restart` para forzar la recreación de pods cuando necesites aplicar cambios en ConfigMaps o Secrets:
+Usa `kubectl rollout restart` para forzar la recreación de pods cuando necesites aplicar cambios en ConfigMaps o Secrets **sin modificar los manifests**:
 
 ```bash
 # Reiniciar deployment
@@ -79,10 +95,11 @@ kubectl rollout history deployment/python-api-1-deploy -n python-api-1-dev
 
 ### Actualizar ConfigMaps
 
-Los cambios en ConfigMaps no se aplican automáticamente a los pods existentes:
+Los cambios en ConfigMaps no se aplican automáticamente a los pods existentes. Hay dos enfoques:
 
+**Opción A: Si solo cambiaste el ConfigMap (sin modificar otros manifests)**
 ```bash
-# 1. Aplicar el ConfigMap actualizado
+# 1. Aplicar solo el ConfigMap actualizado
 kubectl apply -f base/app-python-api-1/configmap.yaml
 
 # 2. Reiniciar pods para que recojan los cambios
@@ -90,6 +107,15 @@ kubectl rollout restart deployment/python-api-1-deploy -n python-api-1-dev
 
 # 3. Verificar que los nuevos pods tienen los cambios
 kubectl logs -n python-api-1-dev -l app=python-api-1 --tail=20
+```
+
+**Opción B: Si modificaste múltiples archivos (ConfigMap + Deployment, etc.)**
+```bash
+# 1. Aplicar todos los cambios usando kustomize
+kustomize build overlays/dev/python-api-1/ | kubectl apply -f -
+
+# 2. Verificar que los pods se reinician automáticamente
+kubectl get pods -n python-api-1-dev -w
 ```
 
 ### Rollback
@@ -174,11 +200,11 @@ kustomize edit fix
 git pull origin main
 # Editar archivos en base/app-python-api-1/
 
-# 2. Probar en desarrollo
-kubectl apply -k overlays/dev/python-api-1/
+# 2. Probar en desarrollo (método recomendado para ver el YAML generado)
+kustomize build overlays/dev/python-api-1/ | kubectl apply -f -
 kubectl get pods -n python-api-1-dev -w
 
-# 3. Validar en staging
+# 3. Validar en staging (método rápido)
 kubectl apply -k overlays/staging/python-api-1/
 kubectl get pods -n python-api-1-staging
 
@@ -186,7 +212,7 @@ kubectl get pods -n python-api-1-staging
 kubectl apply -k overlays/prod/python-api-1/
 kubectl get pods -n python-api-1-prod
 
-# 5. Si necesitas reiniciar pods (ej: después de actualizar ConfigMap)
+# 5. Si solo actualizaste ConfigMap/Secrets (sin cambiar otros manifests)
 kubectl rollout restart deployment/python-api-1-deploy -n python-api-1-prod
 ```
 
