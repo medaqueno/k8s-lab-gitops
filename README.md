@@ -197,12 +197,72 @@ kubectl get all -n python-api-1-prod
    ```
 4. Promover a staging y producción cuando esté listo
 
-### Forzar Redespliegue
+### Forzar Redespliegue (Método Recomendado)
+
+**Mejor Práctica**: Usar `kubectl rollout restart` (disponible desde Kubernetes v1.15+)
 
 ```bash
-# Eliminar y volver a crear
-kubectl delete -k overlays/dev/python-api-1/
-kustomize build overlays/dev/python-api-1/ | kubectl apply -f -
+# Reiniciar deployment para forzar recreación de pods
+kubectl rollout restart deployment/python-api-1-deploy -n python-api-1-dev
+```
+
+**Ventajas**:
+- Más limpio que eliminar/volver a crear
+- Preserva el historial de despliegues
+- Añade anotación automática `kubectl.kubernetes.io/restartedAt`
+- Permite monitorear el progreso del rollout
+
+### Métodos Alternativos
+
+```bash
+# Opción 1: Eliminar pod directamente (rápido pero menos controlado)
+kubectl delete pod -n python-api-1-dev -l app=python-api-1
+
+# Opción 2: Usar kubectl scale (más controlado)
+kubectl scale deployment -n python-api-1-dev python-api-1-deploy --replicas=0
+kubectl scale deployment -n python-api-1-dev python-api-1-deploy --replicas=1
+
+# Opción 3: Usar annotate para forzar redeploy (manual)
+kubectl annotate deployment -n python-api-1-dev python-api-1-deploy \
+  kubectl.kubernetes.io/restartedAt=$(date +%Y-%m-%dT%H:%M:%S%z) --overwrite
+```
+
+## Monitoreo de Rollout
+
+### Verificar Estado del Rollout
+
+```bash
+# Ver estado del rollout
+kubectl rollout status deployment/python-api-1-deploy -n python-api-1-dev
+
+# Ver historial de rollouts
+kubectl rollout history deployment/python-api-1-deploy -n python-api-1-dev
+
+# Ver detalles de una revisión específica
+kubectl rollout history deployment/python-api-1-deploy -n python-api-1-dev --revision=1
+```
+
+### Verificar Pods Reiniciados
+
+```bash
+# Ver pods antes y después del restart
+kubectl get pods -n python-api-1-dev --show-labels
+
+# Verificar que los nuevos pods están corriendo
+kubectl get pods -n python-api-1-dev -w
+
+# Ver detalles del nuevo pod
+kubectl describe pod -n python-api-1-dev <nombre-del-nuevo-pod>
+```
+
+### Verificar Anotaciones de Restart
+
+```bash
+# Ver anotaciones del deployment
+kubectl get deployment -n python-api-1-dev python-api-1-deploy -o jsonpath='{.metadata.annotations}'
+
+# Filtrar solo la anotación de restart
+kubectl get deployment -n python-api-1-dev python-api-1-deploy -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/restartedAt}'
 ```
 
 ## Configuración por Entorno
@@ -213,6 +273,87 @@ kustomize build overlays/dev/python-api-1/ | kubectl apply -f -
 - **Réplicas**: 1
 - **Recursos**: Sin límites
 - **Variables**: `LOG_LEVEL=debug`, `ENVIRONMENT=development`
+
+### Actualización de ConfigMaps
+
+**Importante**: Los cambios en ConfigMaps NO se aplican automáticamente a los pods existentes. Cuando actualices el script Python en el ConfigMap, necesitarás reiniciar los pods para que recojan los cambios:
+
+```bash
+# Aplicar el ConfigMap actualizado
+kubectl apply -f base/app-python-api-1/configmap.yaml
+
+# Reiniciar el deployment para que los pods recojan los cambios
+# Método recomendado (Kubernetes v1.15+):
+kubectl rollout restart deployment/python-api-1-deploy -n python-api-1-dev
+```
+
+**Alternativas**:
+
+```bash
+# Opción 1: Eliminar pod directamente (rápido pero menos controlado)
+kubectl delete pod -n python-api-1-dev -l app=python-api-1
+
+# Opción 2: Usar kubectl scale (más controlado)
+kubectl scale deployment -n python-api-1-dev python-api-1-deploy --replicas=0
+kubectl scale deployment -n python-api-1-dev python-api-1-deploy --replicas=1
+
+# Opción 3: Usar annotate para forzar redeploy (manual)
+kubectl annotate deployment -n python-api-1-dev python-api-1-deploy \
+  kubectl.kubernetes.io/restartedAt=$(date +%Y-%m-%dT%H:%M:%S%z) --overwrite
+```
+
+**Alternativas para producción:**
+1. **Reloader de Stakater**: Herramienta que monitorea cambios en ConfigMaps y Secrets y reinicia automáticamente los pods
+2. **Montar ConfigMap como variables de entorno**: Los cambios se reflejan automáticamente (pero solo para variables simples)
+3. **Sidecar de recarga**: Implementar un contenedor adicional que monitoree cambios y reinicie el contenedor principal
+4. **Webhooks**: Configurar webhooks que detecten cambios en el repositorio y desencadenen reinicios
+
+**Mejor Práctica**: Para entornos de producción, considera implementar **Reloader** o configurar un proceso de CI/CD que maneje automáticamente los reinicios cuando se detecten cambios en ConfigMaps.
+
+## Gestión de ReplicaSets
+
+### Limpieza de ReplicaSets antiguos
+
+Kubernetes conserva los ReplicaSets antiguos para permitir rollbacks rápidos. Sin embargo, estos pueden acumularse y consumir recursos. Para limpiarlos:
+
+```bash
+# Ver todos los ReplicaSets (incluyendo los antiguos)
+kubectl get replicasets -n python-api-1-dev
+
+# Eliminar ReplicaSets antiguos (con 0 pods deseados)
+kubectl delete replicaset -n python-api-1-dev $(kubectl get replicasets -n python-api-1-dev -o jsonpath='{.items[?(@.spec.replicas==0)].metadata.name}')
+
+# Verificar que solo quede el ReplicaSet activo
+kubectl get replicasets -n python-api-1-dev
+```
+
+### ¿Por qué se acumulan ReplicaSets?
+
+1. **Historial de despliegues**: Cada vez que actualizas un deployment, Kubernetes crea un nuevo ReplicaSet
+2. **Rolling updates**: Durante actualizaciones, Kubernetes mantiene temporalmente ambos ReplicaSets
+3. **Rollback safety**: Permite volver rápidamente a versiones anteriores si hay problemas
+4. **Configuración por defecto**: Kubernetes conserva hasta 10 revisiones (configurable en `.spec.revisionHistoryLimit`)
+
+### Buenas prácticas
+
+1. **Limitar el historial de revisiones** (en deployment.yaml):
+```yaml
+spec:
+  revisionHistoryLimit: 3  # Conservar solo las últimas 3 revisiones
+```
+
+2. **Limpieza periódica** en entornos de desarrollo
+3. **Monitorear ReplicaSets** para evitar acumulación excesiva
+
+### Verificar estado actual
+
+```bash
+# Ver todos los recursos incluyendo ReplicaSets
+kubectl get all -n python-api-1-dev
+
+# Contar ReplicaSets antiguos (con 0 pods)
+kubectl get replicasets -n python-api-1-dev --field-selector=status.replicas=0
+```
 
 ### Staging
 
@@ -228,7 +369,31 @@ kustomize build overlays/dev/python-api-1/ | kubectl apply -f -
 - **Recursos**: 512Mi RAM / 500m CPU (requests), 1Gi / 1000m (limits)
 - **Variables**: `LOG_LEVEL=warn`, `ENVIRONMENT=production`
 
-## Verificación
+## Buenas Prácticas
+
+### Gestión de Rollouts
+
+1. **Usar `rollout restart` para reinicios controlados**: Preferir este método sobre eliminar pods directamente
+2. **Monitorear el estado del rollout**: Usar `kubectl rollout status` para verificar que el despliegue se completa correctamente
+3. **Limitar el historial de revisiones**: Configurar `revisionHistoryLimit` a 3-5 para evitar acumulación de ReplicaSets
+4. **Verificar anotaciones**: Confirmar que los reinicios se registran correctamente con la anotación `restartedAt`
+
+### Configuración Recomendada
+
+Añadir esto a tus deployments para mejor control:
+
+```yaml
+spec:
+  revisionHistoryLimit: 3  # Conservar solo las últimas 3 revisiones
+  progressDeadlineSeconds: 600  # Tiempo máximo para completar el rollout
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1  # Máximo de pods adicionales durante el update
+      maxUnavailable: 0  # Máximo de pods no disponibles durante el update
+```
+
+### Verificación
 
 ### Ver YAML Generado
 
@@ -306,3 +471,93 @@ kustomize build . | kubectl apply -f -
 cd ../../prod/python-api-1
 kustomize build . | kubectl apply -f -
 ```
+
+## Ejemplo Práctico: Rollout Restart
+
+### Caso de Uso: Actualizar ConfigMap y Reiniciar Pods
+
+```bash
+# 1. Actualizar el ConfigMap con el nuevo script Python
+kubectl apply -f base/app-python-api-1/configmap.yaml
+
+# 2. Verificar que el ConfigMap se actualizó
+kubectl get configmap -n python-api-1-dev python-api-1-script -o yaml
+
+# 3. Reiniciar el deployment para que los pods recojan los cambios
+kubectl rollout restart deployment/python-api-1-deploy -n python-api-1-dev
+
+# 4. Monitorear el estado del rollout
+kubectl rollout status deployment/python-api-1-deploy -n python-api-1-dev
+
+# 5. Verificar que los nuevos pods están corriendo
+kubectl get pods -n python-api-1-dev
+
+# 6. Verificar que los nuevos pods tienen los cambios
+kubectl logs -n python-api-1-dev -l app=python-api-1 --tail=20
+
+# 7. Verificar el historial de rollouts
+kubectl rollout history deployment/python-api-1-deploy -n python-api-1-dev
+```
+
+### Verificación de Éxito
+
+✅ **El pod se reinició**: El nombre del pod cambió y la edad es reciente
+✅ **El deployment tiene nueva revisión**: `kubectl rollout history` muestra una nueva entrada
+✅ **La anotación de restart está presente**: `kubectl describe deployment` muestra `kubectl.kubernetes.io/restartedAt`
+✅ **La aplicación funciona**: Los logs muestran que el nuevo script se está ejecutando
+
+### Rollback (si es necesario)
+
+```bash
+# Ver historial de revisiones
+kubectl rollout history deployment/python-api-1-deploy -n python-api-1-dev
+
+# Volver a una revisión anterior
+kubectl rollout undo deployment/python-api-1-deploy -n python-api-1-dev --to-revision=2
+
+# Verificar que el rollback se completó
+kubectl rollout status deployment/python-api-1-deploy -n python-api-1-dev
+```
+
+## Notas Adicionales
+
+### Advertencias de Seguridad
+
+Al ejecutar `kubectl rollout restart`, es posible que veas advertencias de seguridad como:
+
+```
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false
+```
+
+Estas advertencias indican que el pod no cumple con los estándares de seguridad modernos. Para corregirlas:
+
+```yaml
+# Añadir al deployment.yaml en la especificación del pod:
+spec:
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: python-api-1
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+```
+
+### Actualización de Kustomize
+
+Si ves advertencias sobre `commonLabels` deprecated, actualiza tus archivos kustomization.yaml:
+
+```bash
+# Para cada directorio con kustomization.yaml
+cd base/app-python-api-1
+kustomize edit fix
+
+cd ../../namespaces
+kustomize edit fix
+```
+
+Esto convertirá automáticamente `commonLabels` a la sintaxis moderna `labels`.
