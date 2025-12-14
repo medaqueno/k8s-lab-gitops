@@ -30,8 +30,8 @@ spec:
           # Comando para ejecutar shell
           args:
             - |
-              pip install requests && python /app/client.py
-              # Instala el paquete requests y ejecuta el script Python
+              python /app/client-1.py
+              # Ejecuta el script Python directamente (sin instalar requests)
           env:
             - name: SERVICE_URL
               # Variable de entorno para la URL del servicio destino

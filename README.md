@@ -261,7 +261,17 @@ kubectl describe deployment -n python-api-1-dev python-api-1-deploy
 ### Ver Logs
 
 ```bash
-kubectl logs -n python-api-1-dev -l app=python-api-1 -f
+# Ver logs en tiempo real con timestamps
+kubectl logs -n python-api-1-dev -l app=python-api-1 --follow --timestamps=true
+
+# Ver logs de todos los contenedores (si hay múltiples)
+kubectl logs -n python-api-1-dev -l app=python-api-1 --all-containers=true --follow --timestamps=true
+
+# Ver últimas 50 líneas con timestamps
+kubectl logs -n python-api-1-dev -l app=python-api-1 --tail=50 --timestamps=true
+
+# Ver logs de un pod específico (filtrar por nombre)
+kubectl logs -n python-api-1-dev <nombre-del-pod> --follow --timestamps=true
 ```
 
 ### Escalar Aplicación

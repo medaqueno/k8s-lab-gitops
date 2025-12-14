@@ -1,4 +1,4 @@
-# ConfigMap: Almacena el script Python que hace requests HTTP
+# ConfigMap: Almacena el script Python que muestra estado y contador
 # Este ConfigMap se monta como volumen en el contenedor en /app
 apiVersion: v1
 kind: ConfigMap
@@ -6,30 +6,20 @@ metadata:
   name: python-api-1-script
   # Nombre del ConfigMap que será referenciado en el deployment
 data:
-  client.py: |
-    # Python API 1 client that continuously requests the echo-server service
-    # Este script se ejecuta en bucle infinito haciendo requests cada 5 segundos
-    import requests
+  client-1.py: |
+    # Python API 1 - Script simplificado que muestra estado y contador
     import time
     import os
+    import sys
 
-    # Obtiene la URL del servicio desde variable de entorno SERVICE_URL
-    # Si no está definida, usa "http://echo-server-svc" como valor por defecto
-    service_url = os.getenv("SERVICE_URL", "http://echo-server-svc")
+    print("Python API 1 - Aplicación en marcha", flush=True)
+    print("Entorno: " + str(os.getenv("ENVIRONMENT", "desconocido")), flush=True)
+    print("Nivel de log: " + str(os.getenv("LOG_LEVEL", "desconocido")), flush=True)
     
-    print(f"Python API 1 starting. Will request {service_url}")
-    
-    # Bucle infinito para hacer requests cada 5 segundos
-    # Esto permite probar la conectividad entre servicios
+    # Bucle infinito con contador
+    contador = 0
     while True:
-        try:
-            # Hace request HTTP GET al servicio
-            # timeout=5: Espera máximo 5 segundos por respuesta
-            response = requests.get(service_url, timeout=5)
-            print(f"Status: {response.status_code}, Response: {response.text[:200]}")
-        except Exception as e:
-            # Si hay error, lo imprime y continúa
-            print(f"Error: {e}")
-        
-        # Espera 5 segundos antes del próximo request
-        time.sleep(5)
+        contador += 1
+        print(f"Contador: {contador} - La aplicación está corriendo", flush=True)
+        sys.stdout.flush()  # Forzar flush de la salida
+        time.sleep(10)

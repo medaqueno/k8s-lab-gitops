@@ -15,7 +15,7 @@ commonLabels:
   environment: dev
 
 # Patches específicos para dev
-patches:
+patchesStrategicMerge:
   - |-
     apiVersion: apps/v1
     kind: Deployment
