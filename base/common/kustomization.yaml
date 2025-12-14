@@ -1,0 +1,16 @@
+# Base común
+# Aquí irían recursos compartidos por todas las aplicaciones
+# Por ahora vacío, pero puede incluir:
+# - ConfigMaps comunes
+# - Secrets compartidos
+# - NetworkPolicies globales
+# - ServiceAccounts comunes
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources: []
+
+commonLabels:
+  lab-group: k8s-lab
+  managed-by: kustomize

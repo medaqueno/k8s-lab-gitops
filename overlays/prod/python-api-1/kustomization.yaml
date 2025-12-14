@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Hereda de base
+resources:
+  - ../../../base/app-python-api-1
+
+# Namespace específico: app + entorno
+namespace: python-api-1-prod
+
+# Labels del entorno
+commonLabels:
+  environment: prod
+
+# Configuración específica de prod
+replicas:
+  - name: python-api-1-deploy
+    count: 3
+
+# Patches específicos para prod
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: python-api-1-deploy
+      spec:
+        template:
+          spec:
+            containers:
+              - name: python-api-1
+                resources:
+                  requests:
+                    memory: "512Mi"
+                    cpu: "500m"
+                  limits:
+                    memory: "1Gi"
+                    cpu: "1000m"
+                env:
+                  - name: LOG_LEVEL
+                    value: "warn"
+                  - name: ENVIRONMENT
+                    value: "production"

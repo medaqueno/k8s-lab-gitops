@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Namespaces para python-api-1
+resources:
+  - namespaces.yaml
+
+# Labels comunes a todos los namespaces
+commonLabels:
+  cluster: main-cluster
+  managed-by: kustomize

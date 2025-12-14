@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: python-api-1-dev
+  labels:
+    app: python-api-1
+    environment: dev
+    lab-group: k8s-lab
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: python-api-1-staging
+  labels:
+    app: python-api-1
+    environment: staging
+    lab-group: k8s-lab
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: python-api-1-prod
+  labels:
+    app: python-api-1
+    environment: prod
+    lab-group: k8s-lab

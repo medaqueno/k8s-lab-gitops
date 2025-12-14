@@ -1,0 +1,28 @@
+# ConfigMap: Stores the Python script that makes HTTP requests
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: python-api-1-script
+data:
+  client.py: |
+    # Python API 1 client that continuously requests the echo-server service
+    import requests
+    import time
+    import os
+
+    # Get the service URL from environment variable
+    service_url = os.getenv("SERVICE_URL", "http://echo-server-svc")
+    
+    print(f"Python API 1 starting. Will request {service_url}")
+    
+    # Infinite loop to continuously make requests every 5 seconds
+    while True:
+        try:
+            # Make HTTP GET request to the service
+            response = requests.get(service_url, timeout=5)
+            print(f"Status: {response.status_code}, Response: {response.text[:200]}")
+        except Exception as e:
+            print(f"Error: {e}")
+        
+        # Wait 5 seconds before next request
+        time.sleep(5)

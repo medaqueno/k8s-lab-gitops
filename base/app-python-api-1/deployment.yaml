@@ -1,0 +1,35 @@
+# Deployment: Creates a pod running Python API 1
+# Purpose: Tests inter-service connectivity by continuously requesting echo-server-svc
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-api-1-deploy
+  labels:
+    app: python-api-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-api-1
+  template:
+    metadata:
+      labels:
+        app: python-api-1
+    spec:
+      containers:
+        - name: python-api-1
+          image: python:3.11-slim
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              pip install requests && python /app/client.py
+          env:
+            - name: SERVICE_URL
+              value: "http://echo-server-svc"
+          volumeMounts:
+            - name: script
+              mountPath: /app
+      volumes:
+        - name: script
+          configMap:
+            name: python-api-1-script
