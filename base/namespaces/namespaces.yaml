@@ -1,4 +1,6 @@
 ---
+# Namespace para entorno de desarrollo
+# Etiquetas: app (nombre de la aplicación), environment (entorno), lab-group (grupo de laboratorio)
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -9,6 +11,8 @@ metadata:
     lab-group: k8s-lab
 
 ---
+# Namespace para entorno de staging (pre-producción)
+# Misma estructura que dev pero con environment: staging
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -19,6 +23,8 @@ metadata:
     lab-group: k8s-lab
 
 ---
+# Namespace para entorno de producción
+# Misma estructura pero con environment: prod
 apiVersion: v1
 kind: Namespace
 metadata:
