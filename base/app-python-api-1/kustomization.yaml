@@ -13,4 +13,4 @@ commonLabels:
 images:
 - name: ghcr.io/medaqueno/k8s-lab-apps-python-1
   newName: ghcr.io/medaqueno/k8s-lab-apps-python-1
-  newTag: "9905698"
+  newTag: 6b430a0
