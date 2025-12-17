@@ -1,45 +1,38 @@
-# Deployment: Crea un pod que ejecuta Python API 1
-# Propósito: Prueba la conectividad entre servicios haciendo requests continuos a echo-server-svc
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: python-api-1-deploy
-  # Nombre del deployment que será gestionado por Kubernetes
   labels:
     app: python-api-1
-    # Etiqueta para identificar este deployment
 spec:
   replicas: 1
-  # Número base de réplicas (se sobrescribe en overlays por entorno)
   selector:
     matchLabels:
       app: python-api-1
-      # Selector para encontrar pods gestionados por este deployment
   template:
     metadata:
       labels:
         app: python-api-1
-        # Etiquetas que serán aplicadas a los pods creados
     spec:
       containers:
         - name: python-api-1
-          # Nombre del contenedor dentro del pod
-          image: python:3.11-slim
-          # Imagen Docker oficial de Python 3.11 (versión ligera)
-          command: ["/bin/sh", "-c"]
-          # Comando para ejecutar shell
-          args:
-            - |
-              python /app/client-1.py
-              # Ejecuta el script Python directamente (sin instalar requests)
-          volumeMounts:
-            - name: script
-              # Nombre del volumen a montar
-              mountPath: /app
-              # Ruta donde se montará el volumen en el contenedor
-      volumes:
-        - name: script
-          # Definición del volumen
-          configMap:
-            name: python-api-1-script
-            # ConfigMap que contiene el script Python a montar
+          # La imagen se actualizará automáticamente con Kustomize (set image)
+          image: ghcr.io/medaqueno/k8s-lab-apps-python-1:latest
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: python-api-1-config
+          # Healthchecks usando tu endpoint /health
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5

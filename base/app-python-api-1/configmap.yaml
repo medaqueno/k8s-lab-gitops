@@ -1,25 +1,10 @@
-# ConfigMap: Almacena el script Python que muestra estado y contador
-# Este ConfigMap se monta como volumen en el contenedor en /app
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: python-api-1-script
-  # Nombre del ConfigMap que será referenciado en el deployment
+  name: python-api-1-config
 data:
-  client-1.py: |
-    # Python API 1 - Script simplificado que muestra estado y contador
-    import time
-    import os
-    import sys
-
-    print("Python API 1 - Aplicación en marcha", flush=True)
-    print("Entorno: " + str(os.getenv("ENVIRONMENT", "desconocido")), flush=True)
-    print("Nivel de log: " + str(os.getenv("LOG_LEVEL", "desconocido")), flush=True)
-
-    # Bucle infinito con contador
-    contador = 0
-    while True:
-        contador += 1
-        print(f"Contador: {contador} - La aplicación está funcionando", flush=True)
-        sys.stdout.flush()  # Forzar flush de la salida
-        time.sleep(10)
+  APP_NAME: "API-1-Dev"
+  LOG_LEVEL: "DEBUG"
+  HOST: "0.0.0.0"
+  PORT: "8000"
+  ENVIRONMENT: "dev"

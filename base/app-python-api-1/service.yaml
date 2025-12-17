@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-api-1-svc
+  labels:
+    app: python-api-1
+spec:
+  type: NodePort # Expone la app fuera del clúster
+  selector:
+    app: python-api-1
+  ports:
+    - port: 8000 # Puerto interno del servicio
+      targetPort: 8000 # Puerto del contenedor
+      nodePort: 30001 # Puerto fijo para acceder desde fuera (opcional, si no pones nada, asigna uno aleatorio)
+      protocol: TCP
