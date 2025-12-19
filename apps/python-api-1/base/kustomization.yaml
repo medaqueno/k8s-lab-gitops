@@ -14,4 +14,4 @@ resources:
 images:
 - name: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
   newName: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
-  newTag: a183ca1
+  newTag: 981c290
