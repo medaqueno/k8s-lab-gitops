@@ -17,7 +17,7 @@ spec:
         node-role.kubernetes.io/tier: "normal"
       containers:
         - name: app
-          image: app-image # Kustomize reemplazará esto automáticamente
+          image: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
           ports:
             - containerPort: 8000
           envFrom:
