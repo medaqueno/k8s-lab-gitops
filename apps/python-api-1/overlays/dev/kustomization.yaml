@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: python-api-1-dev
+
+# Cambiamos variables solo para DEV
+patches:
+  - target:
+      kind: ConfigMap
+      name: python-api-1-config
+    patch: |-
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: "DEBUG"
+      - op: replace
+        path: /data/ENVIRONMENT
+        value: "development"

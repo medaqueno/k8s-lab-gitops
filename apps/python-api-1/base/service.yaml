@@ -1,0 +1,13 @@
+# ClusterIP (el valor por defecto si no pones type), ya que Istio se encargará de la exposición.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-api-1-svc
+spec:
+  selector:
+    app: python-api-1
+  ports:
+    - name: http
+      port: 80 # Puerto que usará el Service dentro del cluster
+      targetPort: 8000 # Puerto real de la app Python

@@ -1,0 +1,25 @@
+# Este es el esqueleto. Fíjate en el nodeSelector para forzar el tier normal
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-api-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-api-1
+  template:
+    metadata:
+      labels:
+        app: python-api-1
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/tier: "normal"
+      containers:
+        - name: app
+          image: app-image # Kustomize reemplazará esto automáticamente
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: python-api-1-config

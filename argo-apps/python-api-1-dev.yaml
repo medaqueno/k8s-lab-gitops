@@ -1,0 +1,21 @@
+# Este archivo es el que le dice a ArgoCD: "Vigila esta carpeta y mantén el clúster igual". Lo guardarás en k8s-gitops/argo-apps/python-api-1-app.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: python-api-1-dev
+  namespace: infra-tools
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/medaqueno/k8s-lab-gitops.git"
+    targetRevision: HEAD
+    path: apps/python-api-1/overlays/dev # <--- Apunta a DEV
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: python-api-1-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
