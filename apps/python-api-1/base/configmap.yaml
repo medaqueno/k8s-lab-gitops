@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # IMPORTANTE: Este nombre debe coincidir con el 'configMapRef' en deployment.yaml
+  name: python-api-1-config
+data:
+  # Ejemplo de variable de entorno para la aplicación.
+  # El valor por defecto se usa en la configuración base,
+  # y se puede parchear en los overlays (dev/prod).
+  APP_ENV: "development"
+  # OTRAS VARIABLES DE EJEMPLO (descomentar si son necesarias):
+  # URL_BASE_INTERNA: "http://internal-service-url"
+  # LOG_LEVEL: "INFO"

@@ -1,0 +1,16 @@
+# kustomization.yaml para la configuración BASE de la aplicación python-api-1
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 1. Lista de todos los archivos YAML que definen los recursos de la aplicación
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+  # Si tienes un Horizontal Pod Autoscaler, también iría aquí
+
+# 2. Definición de la imagen (Esta es la sección que el CI/CD modifica)
+# Kustomize buscará esta imagen en los 'resources' (deployment.yaml) y actualizará el tag.
+images:
+  - name: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
+    newTag: "placeholder-tag-0000" # Este valor será reemplazado por el CI/CD
