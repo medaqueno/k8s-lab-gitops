@@ -1,21 +1,31 @@
-# Este archivo es el que le dice a ArgoCD: "Vigila esta carpeta y mantén el clúster igual". Lo guardarás en k8s-gitops/argo-apps/python-api-1-app.yaml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: python-api-1-dev
-  namespace: infra-tools
+  namespace: infra-tools # O el namespace donde instalaste ArgoCD (ej: infra-tools)
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
+  # Campo obligatorio para ArgoCD: si no usas Proyectos, usa 'default'
   project: default
+
+  # Define dónde buscar los manifiestos
   source:
-    repoURL: "https://github.com/medaqueno/k8s-lab-gitops.git"
-    targetRevision: HEAD
-    path: apps/python-api-1/overlays/dev # <--- Apunta a DEV
+    repoURL: https://github.com/medaqueno/k8s-lab-gitops.git # Cambia a tu URL de repositorio GitOps
+    targetRevision: main # La rama que contiene los manifiestos
+    path: apps/python-api-1/overlays/dev # La carpeta Kustomize a usar
+
+  # Define dónde desplegar los recursos
   destination:
-    server: "https://kubernetes.default.svc"
-    namespace: python-api-1-dev
+    server: https://kubernetes.default.svc
+    namespace: python-api-1-dev # El namespace de destino en el cluster
+
+  # Opciones de sincronización (AutoSync)
   syncPolicy:
     automated:
-      prune: true
-      selfHeal: true
+      prune: true # Eliminar recursos que ya no estén en Git
+      selfHeal: true # Corregir desviaciones automáticamente
     syncOptions:
-      - CreateNamespace=true
+      - CreateNamespace=true # Crear el namespace si no existe
+    # Añadir un Label a los recursos que crea ArgoCD (opcional)
+    # - ApplyOutOfSyncOnly=true
