@@ -17,36 +17,3 @@ images:
     newTag: 3c55c69
 
 # 3. Etiquetas comunes para todos los recursos
-commonLabels:
-  app.kubernetes.io/name: python-api-1
-  app.kubernetes.io/instance: python-api-1-deployment
-  app.kubernetes.io/version: "1.0.0"
-  app.kubernetes.io/component: backend
-  app.kubernetes.io/part-of: k8s-enterprise-lab
-  app.kubernetes.io/managed-by: gitops
-
-  environment: development
-  tier: backend
-
-  team: platform-engineering
-  owner: gitops-team
-
-  logging: enabled
-
-# 4. Anotaciones comunes para todos los recursos
-commonAnnotations:
-  description: "Python API 1 application resources"
-  gitops.repo: "https://github.com/medaqueno/k8s-lab-gitops.git"
-  gitops.path: "apps/python-api-1/base"
-  contact: "platform-engineering@example.com"
-  change-management: "gitops"
-  security-level: standard
-  compliance-tier: medium
-
-# 5. Configuración de generadores y transformadores
-configurations:
-  - kustomizeconfig.yaml
-
-# 6. Configuración de nombres (opcional)
-namePrefix: ""
-nameSuffix: ""
