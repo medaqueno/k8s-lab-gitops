@@ -74,7 +74,7 @@ spec:
         gitops.path: "apps/python-api-1/base"
     spec:
       nodeSelector:
-        node-role.kubernetes.io/tier: "applications"
+        node-role.kubernetes.io/tier: "infra-tools"
       containers:
         - name: app
           image: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
