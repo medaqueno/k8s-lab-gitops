@@ -66,8 +66,8 @@ label:
     singular: "logging"
     plural: "loggings"
 
-# Annotation configuration
-annotation:
+# Annotations configuration
+annotations:
   # Description annotation
   description:
     group: "description"
