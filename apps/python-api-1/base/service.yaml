@@ -3,11 +3,56 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: python-api-1-svc
+  name: python-api-1-service
+  labels:
+    # Application labels
+    app.kubernetes.io/name: python-api-1
+    app.kubernetes.io/instance: python-api-1
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: k8s-enterprise-lab
+    app.kubernetes.io/managed-by: gitops
+    
+    # Environment labels
+    environment: development
+    tier: backend
+    
+    # Service-specific labels
+    service-type: clusterip
+    
+    # Team and ownership
+    team: platform-engineering
+    owner: gitops-team
+    
+    # Monitoring labels
+    monitoring: enabled
+    logging: enabled
+  annotations:
+    # Description
+    description: "ClusterIP service for Python API 1 application"
+    
+    # GitOps metadata
+    gitops.repo: "https://github.com/medaqueno/k8s-lab-gitops.git"
+    gitops.path: "apps/python-api-1/base"
+    
+
+    
+    # Contact information
+    contact: "platform-engineering@example.com"
+    
+    # Change management
+    change-management: "gitops"
+    
+    # Security
+    security-level: standard
+    compliance-tier: medium
 spec:
   selector:
-    app: python-api-1
+    app.kubernetes.io/name: python-api-1
+    app.kubernetes.io/instance: python-api-1-deployment
   ports:
     - name: http
       port: 80 # Puerto que usará el Service dentro del cluster
-      targetPort: 8000 # Puerto real de la app Python
+      targetPort: http # Puerto real de la app Python
+      protocol: TCP
+  type: ClusterIP

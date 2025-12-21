@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: python-api-1-env-config
+  labels:
+    # Application labels
+    app.kubernetes.io/name: python-api-1
+    app.kubernetes.io/instance: python-api-1-deployment
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: k8s-enterprise-lab
+    app.kubernetes.io/managed-by: gitops
+    
+    # Environment labels
+    environment: production
+    tier: production
+    
+    # ConfigMap-specific labels
+    config-type: environment
+    
+    # Team and ownership
+    team: platform-engineering
+    owner: gitops-team
+    
+    # Monitoring labels
+    monitoring: enabled
+    logging: enabled
+  annotations:
+    # Description
+    description: "Production environment configuration for Python API 1"
+    
+    # GitOps metadata
+    gitops.repo: "https://github.com/medaqueno/k8s-lab-gitops.git"
+    gitops.path: "apps/python-api-1/overlays/prod"
+    
+    # Contact information
+    contact: "platform-engineering@example.com"
+    
+    # Change management
+    change-management: "gitops"
+    
+    # Security
+    security-level: high
+    compliance-tier: high
+data:
+  # Production environment specific configuration
+  ENVIRONMENT: "production"
+  DEBUG_MODE: "false"
+  LOG_LEVEL: "INFO"
+  
+  # Production feature flags
+  FEATURE_NEW_API: "false"
+  FEATURE_EXPERIMENTAL: "false"
+  
+  # Production database configuration
+  DATABASE_URL: "postgresql://prod-user:prod-pass@prod-db:5432/prod-db"
+  
+  # Production cache configuration
+  REDIS_URL: "redis://prod-redis:6379/0"
+  
+  # Production API limits
+  RATE_LIMIT: "100"
+  REQUEST_TIMEOUT: "10"
+  
+  # Production monitoring
+  METRICS_ENABLED: "true"
+  TRACING_ENABLED: "true"
+  
+  # Production security
+  SECURITY_LEVEL: "high"
+  COMPLIANCE_MODE: "strict"
+  
+  # Production scaling
+  MIN_REPLICAS: "3"
+  MAX_REPLICAS: "10"

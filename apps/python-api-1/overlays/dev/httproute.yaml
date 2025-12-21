@@ -19,5 +19,5 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: python-api-1-svc # Nombre del Service de la aplicación (definido en 'base')
+        - name: python-api-1-service # Nombre del Service de la aplicación (definido en 'base')
           port: 80

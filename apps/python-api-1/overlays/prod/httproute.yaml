@@ -13,5 +13,5 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: python-api-1-svc
+        - name: python-api-1-service
           port: 80

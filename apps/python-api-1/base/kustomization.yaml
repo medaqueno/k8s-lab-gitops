@@ -4,14 +4,49 @@ kind: Kustomization
 
 # 1. Lista de todos los archivos YAML que definen los recursos de la aplicación
 resources:
-- deployment.yaml
-- service.yaml
-- configmap.yaml
-  # Si tienes un Horizontal Pod Autoscaler, también iría aquí
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+    # Si tienes un Horizontal Pod Autoscaler, también iría aquí
 
 # 2. Definición de la imagen (Esta es la sección que el CI/CD modifica)
 # Kustomize buscará esta imagen en los 'resources' (deployment.yaml) y actualizará el tag.
 images:
-- name: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
-  newName: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
-  newTag: 3c55c69
+  - name: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
+    newName: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
+    newTag: 3c55c69
+
+# 3. Etiquetas comunes para todos los recursos
+commonLabels:
+  app.kubernetes.io/name: python-api-1
+  app.kubernetes.io/instance: python-api-1-deployment
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/component: backend
+  app.kubernetes.io/part-of: k8s-enterprise-lab
+  app.kubernetes.io/managed-by: gitops
+
+  environment: development
+  tier: backend
+
+  team: platform-engineering
+  owner: gitops-team
+
+  logging: enabled
+
+# 4. Anotaciones comunes para todos los recursos
+commonAnnotations:
+  description: "Python API 1 application resources"
+  gitops.repo: "https://github.com/medaqueno/k8s-lab-gitops.git"
+  gitops.path: "apps/python-api-1/base"
+  contact: "platform-engineering@example.com"
+  change-management: "gitops"
+  security-level: standard
+  compliance-tier: medium
+
+# 5. Configuración de generadores y transformadores
+configurations:
+  - kustomizeconfig.yaml
+
+# 6. Configuración de nombres (opcional)
+namePrefix: ""
+nameSuffix: ""

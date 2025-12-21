@@ -4,16 +4,59 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - env-config.yaml
+  - hpa.yaml
   #- httproute.yaml # El archivo que creamos antes para Istio
 
 namespace: python-api-1-prod
 
-# Parches para producción (ej. más réplicas)
+# Environment-specific patches
 patches:
   - target:
       kind: Deployment
-      name: python-api-1
+      name: python-api-1-deployment
     patch: |-
       - op: replace
         path: /spec/replicas
         value: 3
+      - op: replace
+        path: /metadata/labels/environment
+        value: production
+      - op: replace
+        path: /metadata/labels/tier
+        value: production
+      - op: replace
+        path: /metadata/annotations/description
+        value: "Production deployment for Python API 1 application"
+      - op: replace
+        path: /metadata/annotations/security-level
+        value: high
+      - op: replace
+        path: /metadata/annotations/compliance-tier
+        value: high
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "2"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "2Gi"
+  
+  - target:
+      kind: Service
+      name: python-api-1-service
+    patch: |-
+      - op: replace
+        path: /metadata/labels/environment
+        value: production
+      - op: replace
+        path: /metadata/labels/tier
+        value: production
+      - op: replace
+        path: /metadata/annotations/description
+        value: "Production ClusterIP service for Python API 1 application"
+      - op: replace
+        path: /metadata/annotations/security-level
+        value: high
+      - op: replace
+        path: /metadata/annotations/compliance-tier
+        value: high

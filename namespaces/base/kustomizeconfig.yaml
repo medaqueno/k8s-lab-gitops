@@ -1,0 +1,29 @@
+# Kustomize configuration for namespace resources
+
+# Label configuration
+label:
+  # Environment label configuration
+  environment:
+    group: "environment"
+    singular: "environment"
+    plural: "environments"
+    
+  # Team label configuration
+  team:
+    group: "team"
+    singular: "team"
+    plural: "teams"
+
+# Annotation configuration
+annotation:
+  # Description annotation
+  description:
+    group: "description"
+    singular: "description"
+    plural: "descriptions"
+  
+  # Contact annotation
+  contact:
+    group: "contact"
+    singular: "contact"
+    plural: "contacts"

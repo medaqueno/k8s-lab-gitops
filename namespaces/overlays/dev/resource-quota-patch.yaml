@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: standard-quota
+spec:
+  hard:
+    # Development environment - more relaxed quotas
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    
+    # Storage resources
+    requests.storage: 100Gi
+    
+    # Object counts
+    pods: "30"
+    services: "15"
+    configmaps: "30"
+    secrets: "30"
+    persistentvolumeclaims: "15"
