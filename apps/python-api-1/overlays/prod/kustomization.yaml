@@ -4,7 +4,7 @@ kind: Kustomization
 
 resources:
   - ../../base
-  - httproute.yaml # El archivo que creamos antes para Istio
+  #- httproute.yaml # El archivo que creamos antes para Istio
 
 namespace: python-api-1-prod
 
