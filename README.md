@@ -1,243 +1,310 @@
 # k8s-lab-gitops
 
-Guía directa para desplegar aplicaciones en Kubernetes usando GitOps con Kustomize.
+GitOps repository for the Kubernetes Lab. This repository contains all declarative configurations for platform infrastructure and application workloads, managed by ArgoCD.
 
-## 📁 Estructura del Proyecto
+## 📁 Repository Structure
 
 ```
 k8s-lab-gitops/
-├── base/                          # Recursos base (comunes a todos los entornos)
-│   ├── namespaces/                  # Definición de namespaces
-│   │   ├── namespaces.yaml            # Define 3 namespaces (dev/staging/prod)
-│   │   └── kustomization.yaml         # Configuración kustomize
-│   ├── common/                      # Recursos compartidos
-│   │   └── kustomization.yaml         # Base para recursos compartidos
-│   └── app-python-api-1/            # Aplicación Python
-│       ├── configmap.yaml             # Script Python como ConfigMap
-│       ├── deployment.yaml            # Deployment base
-│       └── kustomization.yaml         # Configuración kustomize
-└── overlays/                        # Configuración por entorno
-    ├── dev/                           # Desarrollo
-    │   └── python-api-1/                 # Overlay para dev
-    │       └── kustomization.yaml           # Configuración específica
-    ├── staging/                       # Staging
-    │   └── python-api-1/                 # Overlay para staging
-    │       └── kustomization.yaml           # Configuración específica
-    └── prod/                          # Producción
-        └── python-api-1/                 # Overlay para prod
-            └── kustomization.yaml           # Configuración específica
+├── bootstrap/              # Entry point - "App of Apps"
+│   ├── bootstrap.yaml      # Main bootstrap application
+│   └── argocd-apps/        # ArgoCD Application definitions
+│       ├── platform.yaml   # Syncs platform/ directory
+│       └── workloads.yaml  # Syncs apps/ directory
+│
+├── platform/               # Cluster-wide infrastructure
+│   └── istio/
+│       ├── base/           # Istio Gateway and namespace
+│       └── overlays/       # Environment-specific configs
+│
+└── apps/                   # Application workloads
+    └── demo-app/
+        ├── base/           # Base manifests (env-agnostic)
+        └── overlays/       # Environment-specific configs
+            ├── dev/
+            └── prod/
 ```
 
-## 🚀 Despliegue Rápido
+## 🚀 Initial Setup
 
-### 1. Crear Namespaces
+### Prerequisites
+- Kubernetes cluster running (see `k8s-lab-infra` for cluster setup)
+- `kubectl` configured to access the cluster
 
-```bash
-kubectl apply -k base/namespaces/
-```
+### Bootstrap the GitOps System
 
-### 2. Desplegar en Desarrollo
+1. **Install ArgoCD**:
+   ```bash
+   kubectl create namespace argocd
+   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+   ```
 
-```bash
-kubectl apply -k overlays/dev/python-api-1/
-```
+2. **Apply the Bootstrap Application**:
+   ```bash
+   kubectl apply -f https://raw.githubusercontent.com/medaqueno/k8s-lab-gitops/main/bootstrap/bootstrap.yaml
+   ```
 
-### 3. Desplegar en Staging
+3. **Verify Deployment**:
+   ```bash
+   # Check ArgoCD applications
+   kubectl get applications -n argocd
+   
+   # Check platform resources
+   kubectl get namespaces
+   kubectl get gateway -n istio-system
+   
+   # Check workloads
+   kubectl get pods -n dev-demo-app
+   ```
 
-```bash
-kubectl apply -k overlays/staging/python-api-1/
-```
+## 📘 Common Use Cases
 
-### 4. Desplegar en Producción
+### 1. Adding a New Application
 
-```bash
-kubectl apply -k overlays/prod/python-api-1/
-```
+To add a new application (e.g., `my-api`):
 
-## 🔄 Gestión de Despliegues
+1. **Create the application structure**:
+   ```bash
+   mkdir -p apps/my-api/{base,overlays/{dev,prod}}
+   ```
 
-### Aplicar Cambios en Manifestos
+2. **Create base manifests** in `apps/my-api/base/`:
+   ```yaml
+   # kustomization.yaml
+   apiVersion: kustomize.config.k8s.io/v1beta1
+   kind: Kustomization
+   resources:
+     - deployment.yaml
+     - service.yaml
+     - configmap.yaml
+   ```
 
-Cuando modifiques los archivos base (deployment.yaml, configmap.yaml, etc.), aplica los cambios:
+3. **Create environment overlays** in `apps/my-api/overlays/dev/`:
+   ```yaml
+   # kustomization.yaml
+   apiVersion: kustomize.config.k8s.io/v1beta1
+   kind: Kustomization
+   bases:
+     - ../../base
+   namespace: dev-my-api
+   commonLabels:
+     environment: dev
+   ```
 
-```bash
-# Método 1: Usar kubectl apply con kustomize (recomendado para cambios en manifests)
-kustomize build overlays/dev/python-api-1/ | kubectl apply -f -
+4. **Register the app** in `apps/kustomization.yaml`:
+   ```yaml
+   resources:
+     - demo-app/base/kustomization.yaml
+     - my-api/base/kustomization.yaml  # Add this line
+   ```
 
-# Método 2: Usar kubectl apply directamente con -k (más corto)
-kubectl apply -k overlays/dev/python-api-1/
-```
+5. **Commit and push**:
+   ```bash
+   git add apps/my-api
+   git commit -m "Add my-api application"
+   git push
+   ```
 
-**Cuándo usar cada método**:
-- `kustomize build | kubectl apply`: Cuando quieres ver el YAML generado antes de aplicar
-- `kubectl apply -k`: Para aplicaciones rápidas sin ver el YAML intermedio
+ArgoCD will automatically detect and deploy the new application.
 
-### Reiniciar Pods (Método Recomendado)
+### 2. Deploying to Different Environments
 
-Usa `kubectl rollout restart` para forzar la recreación de pods cuando necesites aplicar cambios en ConfigMaps o Secrets **sin modificar los manifests**:
+#### Deploy to Development
+The `dev` overlay is automatically synced by the `workloads` Application. Just push changes to the `main` branch.
 
-```bash
-# Reiniciar deployment
-kubectl rollout restart deployment/python-api-1-deploy -n python-api-1-dev
+#### Deploy to Production
+To deploy to production, you have two options:
 
-# Verificar estado del rollout
-kubectl rollout status deployment/python-api-1-deploy -n python-api-1-dev
+**Option A: Separate ArgoCD Application (Recommended)**
 
-# Ver historial de rollouts
-kubectl rollout history deployment/python-api-1-deploy -n python-api-1-dev
-```
-
-**Ventajas**:
-- ✅ Más limpio que eliminar pods directamente
-- ✅ Preserva el historial de despliegues
-- ✅ Añade anotación automática `kubectl.kubernetes.io/restartedAt`
-- ✅ Permite monitorear el progreso
-
-### Actualizar ConfigMaps
-
-Los cambios en ConfigMaps no se aplican automáticamente a los pods existentes. Hay dos enfoques:
-
-**Opción A: Si solo cambiaste el ConfigMap (sin modificar otros manifests)**
-```bash
-# 1. Aplicar solo el ConfigMap actualizado
-kubectl apply -f base/app-python-api-1/configmap.yaml
-
-# 2. Reiniciar pods para que recojan los cambios
-kubectl rollout restart deployment/python-api-1-deploy -n python-api-1-dev
-
-# 3. Verificar que los nuevos pods tienen los cambios
-kubectl logs -n python-api-1-dev -l app=python-api-1 --tail=20
-```
-
-**Opción B: Si modificaste múltiples archivos (ConfigMap + Deployment, etc.)**
-```bash
-# 1. Aplicar todos los cambios usando kustomize
-kustomize build overlays/dev/python-api-1/ | kubectl apply -f -
-
-# 2. Verificar que los pods se reinician automáticamente
-kubectl get pods -n python-api-1-dev -w
-```
-
-### Rollback
-
-```bash
-# Ver historial de revisiones
-kubectl rollout history deployment/python-api-1-deploy -n python-api-1-dev
-
-# Volver a una revisión anterior
-kubectl rollout undo deployment/python-api-1-deploy -n python-api-1-dev --to-revision=2
-```
-
-## 📊 Verificación
-
-### Ver Recursos
-
-```bash
-# Ver todos los recursos en un namespace
-kubectl get all -n python-api-1-dev
-
-# Ver pods con detalles
-kubectl get pods -n python-api-1-dev -o wide
-
-# Ver logs
-kubectl logs -n python-api-1-dev -l app=python-api-1 --follow
-```
-
-### Ver YAML Generado
-
-```bash
-# Ver la configuración final que se aplicará
-kustomize build overlays/dev/python-api-1/
-```
-
-## 🎯 Buenas Prácticas
-
-### Configuración Recomendada para Deployments
-
+Create `bootstrap/argocd-apps/workloads-prod.yaml`:
 ```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: workloads-prod
+  namespace: argocd
 spec:
-  revisionHistoryLimit: 3  # Conservar solo las últimas 3 revisiones
-  progressDeadlineSeconds: 600  # Tiempo máximo para completar el rollout
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1  # Máximo de pods adicionales durante el update
-      maxUnavailable: 0  # Máximo de pods no disponibles
+  project: default
+  source:
+    repoURL: https://github.com/medaqueno/k8s-lab-gitops.git
+    targetRevision: main
+    path: apps
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false  # Manual approval for prod
 ```
 
-### Seguridad
+**Option B: Use Kustomize Overlays**
 
-Para corregir advertencias de PodSecurity:
-
-```yaml
-spec:
-  securityContext:
-    runAsNonRoot: true
-    seccompProfile:
-      type: RuntimeDefault
-  containers:
-  - name: python-api-1
-    securityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-        - ALL
-```
-
-### Actualización de Kustomize
-
-Si ves advertencias sobre `commonLabels` deprecated:
-
+Modify your app's overlay to point to `prod`:
 ```bash
-cd base/app-python-api-1
-kustomize edit fix
+# In apps/my-api/overlays/prod/kustomization.yaml
+namespace: prod-my-api
+commonLabels:
+  environment: prod
+replicas:
+  - name: my-api
+    count: 3
 ```
 
-## 🔗 Flujo de Trabajo Recomendado
+### 3. Updating Configuration (ConfigMaps/Secrets)
 
+#### Update a ConfigMap
+
+1. **Edit the ConfigMap** in `apps/demo-app/base/configmap.yaml`:
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: demo-app-config
+   data:
+     app.properties: |
+       version=2.0  # Changed from 1.0
+       feature.enabled=true  # New property
+   ```
+
+2. **Commit and push**:
+   ```bash
+   git add apps/demo-app/base/configmap.yaml
+   git commit -m "Update demo-app config to v2.0"
+   git push
+   ```
+
+3. **Verify sync**:
+   ```bash
+   kubectl get configmap -n dev-demo-app demo-app-config -o yaml
+   ```
+
+#### Add a Secret
+
+1. **Create the secret manifest** in `apps/my-api/base/secret.yaml`:
+   ```yaml
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: my-api-secret
+   type: Opaque
+   stringData:
+     database-password: "changeme"  # Use sealed-secrets in production!
+   ```
+
+2. **Add to kustomization**:
+   ```yaml
+   # apps/my-api/base/kustomization.yaml
+   resources:
+     - deployment.yaml
+     - service.yaml
+     - secret.yaml  # Add this
+   ```
+
+> [!WARNING]
+> **Never commit real secrets to Git!** Use [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets) or [External Secrets Operator](https://external-secrets.io/) for production.
+
+### 4. Rolling Back Changes
+
+#### Option A: Git Revert (Recommended)
+
+1. **Find the commit to revert**:
+   ```bash
+   git log --oneline apps/demo-app/
+   ```
+
+2. **Revert the commit**:
+   ```bash
+   git revert <commit-hash>
+   git push
+   ```
+
+ArgoCD will automatically sync the reverted state.
+
+#### Option B: Manual Rollback via ArgoCD UI
+
+1. Access ArgoCD UI:
+   ```bash
+   kubectl port-forward svc/argocd-server -n argocd 8080:443
+   ```
+
+2. Navigate to the application → **History and Rollback** → Select previous revision → **Rollback**.
+
+#### Option C: Disable Auto-Sync and Rollback Manually
+
+1. **Disable auto-sync** in the Application manifest:
+   ```yaml
+   syncPolicy:
+     automated: null  # Remove automated sync
+   ```
+
+2. **Manually sync to a previous revision**:
+   ```bash
+   argocd app rollback workloads <revision-number>
+   ```
+
+### 5. Adding Platform Components
+
+To add a new platform component (e.g., monitoring):
+
+1. **Create the structure**:
+   ```bash
+   mkdir -p platform/monitoring/{base,overlays/dev}
+   ```
+
+2. **Add manifests** in `platform/monitoring/base/`:
+   ```yaml
+   # namespace.yaml
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: monitoring
+     labels:
+       app.kubernetes.io/part-of: platform
+   ```
+
+3. **Register in platform kustomization**:
+   ```yaml
+   # platform/kustomization.yaml
+   resources:
+     - istio/base/kustomization.yaml
+     - monitoring/base/kustomization.yaml  # Add this
+   ```
+
+4. **Commit and push**:
+   ```bash
+   git add platform/monitoring
+   git commit -m "Add monitoring platform component"
+   git push
+   ```
+
+## 🔍 Troubleshooting
+
+### Check Application Status
 ```bash
-# 1. Hacer cambios en los archivos base
-git pull origin main
-# Editar archivos en base/app-python-api-1/
-
-# 2. Probar en desarrollo (método recomendado para ver el YAML generado)
-kustomize build overlays/dev/python-api-1/ | kubectl apply -f -
-kubectl get pods -n python-api-1-dev -w
-
-# 3. Validar en staging (método rápido)
-kubectl apply -k overlays/staging/python-api-1/
-kubectl get pods -n python-api-1-staging
-
-# 4. Desplegar en producción
-kubectl apply -k overlays/prod/python-api-1/
-kubectl get pods -n python-api-1-prod
-
-# 5. Si solo actualizaste ConfigMap/Secrets (sin cambiar otros manifests)
-kubectl rollout restart deployment/python-api-1-deploy -n python-api-1-prod
+kubectl get applications -n argocd
+argocd app get workloads
 ```
 
-## 📝 Notas
-
-- **Namespaces**: Cada entorno tiene su propio namespace (`python-api-1-dev`, `python-api-1-staging`, `python-api-1-prod`)
-- **Réplicas**: 1 en dev, 2 en staging, 3 en producción
-- **Recursos**: Sin límites en dev, con límites en staging/prod
-- **Variables de entorno**: Diferentes niveles de logging por entorno (debug/info/warn)
-
-## 🔧 Comandos Útiles
-
+### View Sync Errors
 ```bash
-# Ver eventos
-kubectl get events -n python-api-1-dev --sort-by='.lastTimestamp'
-
-# Escalar aplicación
-kubectl scale deployment -n python-api-1-dev python-api-1-deploy --replicas=3
-
-# Eliminar recursos
-kubectl delete -k overlays/dev/python-api-1/
-
-# Ver detalles de un pod
-kubectl describe pod -n python-api-1-dev <nombre-del-pod>
-
-# Ver detalles de un deployment
-kubectl describe deployment -n python-api-1-dev python-api-1-deploy
+argocd app sync workloads --dry-run
+kubectl describe application workloads -n argocd
 ```
+
+### Force Sync
+```bash
+argocd app sync workloads --force
+```
+
+### Check Kustomize Build Locally
+```bash
+kustomize build apps/demo-app/overlays/dev
+```
+
+## 📚 Additional Resources
+
+- [ArgoCD Documentation](https://argo-cd.readthedocs.io/)
+- [Kustomize Documentation](https://kustomize.io/)
+- [GitOps Principles](https://opengitops.dev/)
+- [k8s-lab-infra Repository](https://github.com/medaqueno/k8s-lab-infra) - Cluster infrastructure setup
