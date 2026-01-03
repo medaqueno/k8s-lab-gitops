@@ -32,8 +32,6 @@ spec:
       values: |
         profile: ambient
         cni:
-          cniBinDir: /usr/libexec/cni
-          cniConfDir: /etc/cni/net.d
           ambient:
             ipv6: false
   destination:
@@ -58,6 +56,13 @@ spec:
     helm:
       values: |
         profile: ambient
+        pilot:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
   destination:
     server: https://kubernetes.default.svc
     namespace: istio-system
