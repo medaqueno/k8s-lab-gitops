@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: dev-demo-app
+  name: dev-python-api-1
   labels:
     istio.io/dataplane-mode: ambient
     tier: application

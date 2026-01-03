@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demo-app
-  namespace: dev-demo-app
+  name: python-api-1
+  namespace: dev-python-api-1
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: demo-app
+      app: python-api-1
   template:
     metadata:
       labels:
-        app: demo-app
+        app: python-api-1
     spec:
       containers:
-        - name: demo-app
-          image: ghcr.io/medaqueno/python-api-1:latest
+        - name: python-api-1
+          image: ghcr.io/medaqueno/k8s-lab-apps-python-api-1:latest
           ports:
             - containerPort: 8000
