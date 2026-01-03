@@ -57,6 +57,29 @@ k8s-lab-gitops/
    kubectl get pods -n dev-demo-app
    ```
 
+## 🌐 Accessing Applications
+The applications are exposed via the Istio Ingress Gateway using NodePorts (unless MetalLB is configured).
+
+### 1. Find the Cluster Node IP
+This is the address of your physical/virtual machine running the cluster.
+```bash
+kubectl get nodes -o wide
+# Look for INTERNAL-IP (e.g., 192.168.1.35)
+```
+
+### 2. Find the Gateway NodePort
+This is the specific port opened on that node for HTTP traffic.
+```bash
+kubectl get svc -n istio-system main-gateway-istio
+# Look for PORT(S) -> 80:30613/TCP. The second number (30613) is the NodePort.
+```
+
+### 3. Access URL
+Combine the IP and Port:
+`http://<NODE-IP>:<NODE-PORT>/`
+
+Example: `http://192.168.1.35:30613/`
+
 ## 📘 Common Use Cases
 
 ### 1. Adding a New Application
