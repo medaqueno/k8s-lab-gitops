@@ -63,11 +63,11 @@ k8s-lab-gitops/
 
 To add a new application (e.g., `my-api`):
 
-1. **Define the Landing Zone (Optional but Recommended)**:
-   Add the namespace to `platform/istio/base/workload-namespaces.yaml` to ensure it has the correct Istio Ambient labels from the start:
+1. **Apply the Landing Zone (Recommended)**:
+   By default, ArgoCD can create namespaces, but it creates them without labels. For Istio Ambient Mesh to work, the namespace *must* have the correct label.
+   
+   Create a namespace manifest (e.g., `apps/my-api/base/namespace.yaml`):
    ```yaml
-   # platform/istio/base/workload-namespaces.yaml
-   ---
    apiVersion: v1
    kind: Namespace
    metadata:
@@ -76,6 +76,7 @@ To add a new application (e.g., `my-api`):
        istio.io/dataplane-mode: ambient
        tier: application
    ```
+   *Note: You can also choose to add this to a central `platform` folder if you prefer global management.*
 
 2. **Create the application structure**:
    ```bash
@@ -88,6 +89,7 @@ To add a new application (e.g., `my-api`):
    apiVersion: kustomize.config.k8s.io/v1beta1
    kind: Kustomization
    resources:
+     - namespace.yaml
      - deployment.yaml
      - service.yaml
      - configmap.yaml
@@ -302,16 +304,22 @@ kubectl get applications -n argocd
 argocd app get workloads
 ```
 
-### View Sync Errors
-```bash
-argocd app sync workloads --dry-run
-kubectl describe application workloads -n argocd
-```
+### Application stays in "Progressing" (LoadBalancer Pending)
 
-### Force Sync
-```bash
-argocd app sync workloads --force
+In local environments without a cloud provider (like this lab), the Istio Gateway creates a Service of type `LoadBalancer` that will stay in `<pending>` status because there's no automatic IP provisioner.
+
+**Options to fix this:**
+1. **MetalLB (Recommended)**: Install [MetalLB](https://metallb.universe.tf/) in the cluster to provide local IP addresses.
+2. **Ignore Health Check**: Configure ArgoCD to ignore the `status.loadBalancer` field for Services.
+3. **Use NodePort**: Patch the generated Service to be `type: NodePort`.
+
+### Ztunnel pods not starting
+
+Istio Ambient's `ztunnel` requires privileged permissions. Ensure the `istio-system` namespace has the following label:
+```yaml
+pod-security.kubernetes.io/enforce: privileged
 ```
+This is already included in `platform/istio/base/namespace.yaml`.
 
 ### Check Kustomize Build Locally
 ```bash

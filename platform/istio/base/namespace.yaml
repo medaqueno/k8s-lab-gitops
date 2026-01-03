@@ -5,3 +5,5 @@ metadata:
   labels:
     app.kubernetes.io/part-of: platform
     app.kubernetes.io/name: istio
+    tier: platform
+    pod-security.kubernetes.io/enforce: privileged
