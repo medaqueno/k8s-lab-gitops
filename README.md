@@ -63,7 +63,21 @@ k8s-lab-gitops/
 
 To add a new application (e.g., `my-api`):
 
-1. **Create the application structure**:
+1. **Define the Landing Zone (Optional but Recommended)**:
+   Add the namespace to `platform/istio/base/workload-namespaces.yaml` to ensure it has the correct Istio Ambient labels from the start:
+   ```yaml
+   # platform/istio/base/workload-namespaces.yaml
+   ---
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: dev-my-api
+     labels:
+       istio.io/dataplane-mode: ambient
+       tier: application
+   ```
+
+2. **Create the application structure**:
    ```bash
    mkdir -p apps/my-api/{base,overlays/{dev,prod}}
    ```
@@ -79,7 +93,8 @@ To add a new application (e.g., `my-api`):
      - configmap.yaml
    ```
 
-3. **Create environment overlays** in `apps/my-api/overlays/dev/`:
+4. **Create environment overlays** in `apps/my-api/overlays/dev/`:
+   Ensure the `namespace` field matches the one created in step 1.
    ```yaml
    # kustomization.yaml
    apiVersion: kustomize.config.k8s.io/v1beta1
@@ -98,14 +113,14 @@ To add a new application (e.g., `my-api`):
      - my-api/base/kustomization.yaml  # Add this line
    ```
 
-5. **Commit and push**:
+6. **Commit and push**:
    ```bash
-   git add apps/my-api
-   git commit -m "Add my-api application"
+   git add .
+   git commit -m "Add my-api application and its landing zone"
    git push
    ```
 
-ArgoCD will automatically detect and deploy the new application.
+ArgoCD will automatically detect the new namespace and the application.
 
 ### 2. Deploying to Different Environments
 

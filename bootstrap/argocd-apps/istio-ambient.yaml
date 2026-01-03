@@ -31,6 +31,9 @@ spec:
     helm:
       values: |
         profile: ambient
+        cni:
+          cniBinDir: /usr/libexec/cni
+          cniConfDir: /etc/cni/net.d
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
