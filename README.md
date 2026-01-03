@@ -276,6 +276,7 @@ To add a new platform component (e.g., monitoring):
      name: monitoring
      labels:
        app.kubernetes.io/part-of: platform
+       istio.io/dataplane-mode: ambient  # If this tool should be in the mesh
    ```
 
 3. **Register in platform kustomization**:
