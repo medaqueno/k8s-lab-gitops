@@ -116,9 +116,37 @@ To add a new application (e.g., `my-api`):
      - deployment.yaml
      - service.yaml
      - configmap.yaml
+     - httproute.yaml
    ```
 
-4. **Create environment overlays** in `apps/my-api/overlays/dev/`:
+4. **Create HTTPRoute** in `apps/my-api/base/httproute.yaml` to expose it via Istio:
+   ```yaml
+   apiVersion: gateway.networking.k8s.io/v1
+   kind: HTTPRoute
+   metadata:
+     name: my-api-route
+     namespace: dev-my-api
+   spec:
+     parentRefs:
+       - name: main-gateway
+         namespace: istio-system
+     rules:
+       - matches:
+           - path:
+               type: PathPrefix
+               value: /my-api
+         filters:
+           - type: URLRewrite
+             urlRewrite:
+               path:
+                 type: ReplacePrefixMatch
+                 replacePrefixMatch: /
+         backendRefs:
+           - name: my-api
+             port: 80
+   ```
+
+5. **Create environment overlays** in `apps/my-api/overlays/dev/`:
    Ensure the `namespace` field matches the one created in step 1.
    ```yaml
    # kustomization.yaml
@@ -131,14 +159,14 @@ To add a new application (e.g., `my-api`):
      environment: dev
    ```
 
-4. **Register the app** in `apps/kustomization.yaml`:
+6. **Register the app** in `apps/kustomization.yaml`:
    ```yaml
    resources:
      - demo-app/base/kustomization.yaml
      - my-api/base/kustomization.yaml  # Add this line
    ```
 
-6. **Commit and push**:
+7. **Commit and push**:
    ```bash
    git add .
    git commit -m "Add my-api application and its landing zone"
