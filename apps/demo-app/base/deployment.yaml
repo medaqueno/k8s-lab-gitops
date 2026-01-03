@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: demo-app
-          image: nginx:latest
+          image: ghcr.io/medaqueno/python-api-1:latest
           ports:
-            - containerPort: 80
+            - containerPort: 8000
