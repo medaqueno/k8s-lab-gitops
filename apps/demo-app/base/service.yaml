@@ -1,11 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: python-api-1
-  namespace: dev-python-api-1
+  name: demo-app
+  namespace: dev-demo-app
+  labels:
+    app: demo-app
 spec:
   selector:
-    app: python-api-1
+    app: demo-app
   ports:
     - port: 80
       targetPort: 8000

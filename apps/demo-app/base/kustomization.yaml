@@ -11,6 +11,6 @@ resources:
 - service.yaml
 - httproute.yaml
 images:
-- name: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
-  newName: ghcr.io/medaqueno/k8s-lab-apps-python-api-1
+- name: ghcr.io/medaqueno/k8s-lab-apps-demo-app
+  newName: ghcr.io/medaqueno/k8s-lab-apps-demo-app
   newTag: 65bb419

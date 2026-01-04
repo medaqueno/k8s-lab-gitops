@@ -4,7 +4,7 @@ kind: Kustomization
 bases:
   - ../../base
 
-namespace: dev-python-api-1
+namespace: dev-demo-app
 
 commonLabels:
   environment: dev
