@@ -2,6 +2,8 @@
 
 GitOps repository for the Kubernetes Lab. This repository contains all declarative configurations for platform infrastructure and application workloads, managed by ArgoCD.
 
+> **Prerequisite:** Ensure you have completed the cluster bootstrap following the [k8s-lab-infra installation guide](https://github.com/medaqueno/k8s-lab-infra).
+
 ## 📁 Repository Structure
 
 ```
@@ -25,27 +27,37 @@ k8s-lab-gitops/
             └── prod/
 ```
 
-## 🚀 Initial Setup
+## Quick Start
 
-### Prerequisites
-- Kubernetes cluster running (see `k8s-lab-infra` for cluster setup)
-- `kubectl` configured to access the cluster
+If you have completed the installation in `k8s-lab-infra`, ArgoCD is already installed and the bootstrap is applied. This repository manages:
 
-### Bootstrap the GitOps System
+1. **Platform components** (Istio, namespaces, gateways)
+2. **Application workloads** (your applications in different environments)
 
-1. **Install ArgoCD**:
+### Verify System Status
+
+```bash
+# Check ArgoCD applications
+kubectl get applications -n argocd
+
+# Expected output:
+# NAME        SYNC STATUS   HEALTH STATUS
+# bootstrap   Synced        Healthy
+# platform    Synced        Progressing  (normal in local lab)
+# workloads   Synced        Healthy
+```
+
+### Access ArgoCD UI
+
+1. **Retrieve the admin password**:
    ```bash
-   kubectl create namespace argocd
-   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+   kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
    ```
 
-2. **Apply the Bootstrap Application**:
+2. **Port-forward to the server**:
    ```bash
-   kubectl apply -f https://raw.githubusercontent.com/medaqueno/k8s-lab-gitops/main/bootstrap/bootstrap.yaml
-   ```
+---
 
-3. **Verify Deployment**:
-   ```bash
    # Check ArgoCD applications
    kubectl get applications -n argocd
    
@@ -349,15 +361,22 @@ To add a new platform component (e.g., monitoring):
 
 ## 🔍 Troubleshooting
 
-### Check Application Status
+### Application Status
+
 ```bash
+# Check all applications
 kubectl get applications -n argocd
+
+# Get detailed info about a specific app
 argocd app get workloads
+
+# Check application logs
+kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller
 ```
 
-### Application stays in "Progressing" (LoadBalancer Pending)
+### Application Stays in "Progressing"
 
-In local environments without a cloud provider (like this lab), the Istio Gateway creates a Service of type `LoadBalancer` that will stay in `<pending>` status because there's no automatic IP provisioner.
+In local environments without a cloud provider, the Istio Gateway creates a Service of type `LoadBalancer` that will stay in `<pending>` status indefinitely.
 
 **Options to fix this:**
 1. **MetalLB (Recommended)**: Install [MetalLB](https://metallb.universe.tf/) in the cluster to provide local IP addresses.
@@ -366,20 +385,25 @@ In local environments without a cloud provider (like this lab), the Istio Gatewa
 
 ### Ztunnel pods not starting
 
-Istio Ambient's `ztunnel` requires privileged permissions. Ensure the `istio-system` namespace has the following label:
+Istio Ambient's `ztunnel` requires privileged permissions. Ensure the `istio-system` namespace has the correct label:
 ```yaml
 pod-security.kubernetes.io/enforce: privileged
 ```
 This is already included in `platform/istio/base/namespace.yaml`.
 
 ### Check Kustomize Build Locally
+
+To verify the output before committing:
 ```bash
 kustomize build apps/demo-app/overlays/dev
 ```
+
+---
 
 ## 📚 Additional Resources
 
 - [ArgoCD Documentation](https://argo-cd.readthedocs.io/)
 - [Kustomize Documentation](https://kustomize.io/)
 - [GitOps Principles](https://opengitops.dev/)
-- [k8s-lab-infra Repository](https://github.com/medaqueno/k8s-lab-infra) - Cluster infrastructure setup
+- [k8s-lab-infra Repository](https://github.com/medaqueno/k8s-lab-infra) - Initial cluster installation
+- [Istio Ambient Mesh](https://istio.io/latest/docs/ambient/) - Sidecarless architecture
