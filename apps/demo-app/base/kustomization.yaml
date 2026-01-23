@@ -13,4 +13,4 @@ resources:
 images:
 - name: ghcr.io/medaqueno/k8s-lab-apps-demo-app
   newName: ghcr.io/medaqueno/k8s-lab-apps-demo-app
-  newTag: a249950
+  newTag: a18baea
