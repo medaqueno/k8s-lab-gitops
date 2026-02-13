@@ -4,6 +4,8 @@ kind: Kustomization
 commonLabels:
   tier: application
 
+namespace: demo-app
+
 resources:
   - configmap.yaml
   - deployment.yaml
