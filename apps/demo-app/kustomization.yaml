@@ -7,12 +7,12 @@ commonLabels:
 namespace: demo-app
 
 resources:
-  - configmap.yaml
-  - deployment.yaml
-  - service.yaml
-  - httproute.yaml
-  - namespace.yaml
+- configmap.yaml
+- deployment.yaml
+- service.yaml
+- httproute.yaml
+- namespace.yaml
 images:
-  - name: ghcr.io/medaqueno/k8s-lab-apps-demo-app
-    newName: ghcr.io/medaqueno/k8s-lab-apps-demo-app
-    newTag: a18baea
+- name: ghcr.io/medaqueno/k8s-lab-apps-demo-app
+  newName: ghcr.io/medaqueno/k8s-lab-apps-demo-app
+  newTag: 68e936d
