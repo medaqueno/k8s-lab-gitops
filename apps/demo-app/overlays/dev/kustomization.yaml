@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-bases:
+resources:
   - ../../base
 
 namespace: dev-demo-app
@@ -9,3 +9,16 @@ namespace: dev-demo-app
 commonLabels:
   environment: dev
   tier: application
+
+images:
+  - name: ghcr.io/medaqueno/k8s-lab-apps-demo-app
+    newTag: dev-latest
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: demo-app-route
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/matches/0/path/value
+        value: /dev/demo-app

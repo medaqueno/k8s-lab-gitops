@@ -1,7 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: demo-app
+  name: prod-demo-app
   labels:
     istio.io/dataplane-mode: ambient
     tier: application
+    environment: prod

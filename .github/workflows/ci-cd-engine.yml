@@ -9,8 +9,11 @@ on:
         required: true
         type: string
         description: "Nombre de la aplicación para etiquetado."
+      environment:
+        required: true
+        type: string
+        description: "Entorno de despliegue: dev, prod, staging, etc."
 
-# El permiso de escritura de paquetes es necesario aquí porque esta es la acción que hace el push a ghcr.io
 permissions:
   contents: read
   packages: write
@@ -20,21 +23,25 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       short_sha: ${{ steps.vars.outputs.sha_short }}
+      image_tag: ${{ steps.vars.outputs.image_tag }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set short git commit SHA
+      - name: Set image tag variables
         id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: |
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          echo "sha_short=$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "image_tag=${{ inputs.environment }}-$SHA_SHORT" >> $GITHUB_OUTPUT
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # Usa el token automático que tiene 'packages: write'
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -42,36 +49,34 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/medaqueno/k8s-lab-apps-${{ inputs.app_name }}:${{ steps.vars.outputs.sha_short }}
-            ghcr.io/medaqueno/k8s-lab-apps-${{ inputs.app_name }}:latest
+            ghcr.io/medaqueno/k8s-lab-apps-${{ inputs.app_name }}:${{ steps.vars.outputs.image_tag }}
+            ghcr.io/medaqueno/k8s-lab-apps-${{ inputs.app_name }}:${{ inputs.environment }}-latest
 
   update-gitops:
     needs: build-and-push
     runs-on: ubuntu-latest
-    # Aquí ya no necesitas el checkout con SSH, puedes usar el GITHUB_TOKEN por defecto si
-    # el repositorio GitOps no es privado, pero si lo es o quieres el bot, la clave es mejor.
     steps:
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
           repository: medaqueno/k8s-lab-gitops
-          ssh-key: ${{ secrets.GIT_OPS_SSH_KEY }} # Usando la clave SSH pasada
+          ssh-key: ${{ secrets.GIT_OPS_SSH_KEY }}
 
       - name: Update Kubernetes resources
         run: |
-          # Navega a la carpeta base del Kustomize de la aplicación
-          cd apps/${{ inputs.app_name }}/base
+          # Navega al overlay específico del entorno
+          cd apps/${{ inputs.app_name }}/overlays/${{ inputs.environment }}
 
-          # Actualiza el tag de la imagen
-          kustomize edit set image ghcr.io/medaqueno/k8s-lab-apps-${{ inputs.app_name }}=ghcr.io/medaqueno/k8s-lab-apps-${{ inputs.app_name }}:${{ needs.build-and-push.outputs.short_sha }}
+          # Actualiza el tag de la imagen usando kustomize
+          kustomize edit set image ghcr.io/medaqueno/k8s-lab-apps-${{ inputs.app_name }}=ghcr.io/medaqueno/k8s-lab-apps-${{ inputs.app_name }}:${{ needs.build-and-push.outputs.image_tag }}
 
-          # Volvemos al root del repo GitOps
-          cd ../../..
+          # Vuelve al root del repo GitOps
+          cd ../../../..
 
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Update image ${{ inputs.app_name }} to ${{ needs.build-and-push.outputs.short_sha }} [skip ci]"
+          git commit -m "Update ${{ inputs.environment }} image for ${{ inputs.app_name }} to ${{ needs.build-and-push.outputs.image_tag }} [skip ci]"
           git push
