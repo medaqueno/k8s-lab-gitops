@@ -17,14 +17,10 @@ k8s-lab-gitops/
 ├── platform/               # Cluster-wide infrastructure
 │   └── istio/
 │       ├── base/           # Istio Gateway and namespace
-│       └── overlays/       # Environment-specific configs
+│       └── overlays/       # Environment-specific configs (default)
 │
 └── apps/                   # Application workloads
-    └── demo-app/
-        ├── base/           # Base manifests (env-agnostic)
-        └── overlays/       # Environment-specific configs
-            ├── dev/
-            └── prod/
+    └── demo-app/           # Base manifests (single env)
 ```
 
 ## Quick Start
@@ -97,7 +93,7 @@ kubectl logs -n istio-system -l app=ztunnel | grep "adding pod"
    kubectl get gateway -n istio-system
    
    # Check workloads
-   kubectl get pods -n dev-demo-app
+   kubectl get pods -n demo-app
    ```
 
 ## 🌐 Accessing Applications
@@ -129,46 +125,31 @@ Example: `http://192.168.1.35:30613/`
 
 To add a new application (e.g., `my-api`):
 
-1. **Apply the Landing Zone (Recommended)**:
-   By default, ArgoCD can create namespaces, but it creates them without labels. For Istio Ambient Mesh to work, the namespace *must* have the correct label.
+1. **Create the application structure**:
+   ```bash
+   mkdir -p apps/my-api
+   ```
+
+2. **Create manifests** in `apps/my-api/`:
    
-   Create a namespace manifest (e.g., `apps/my-api/base/namespace.yaml`):
+   **`namespace.yaml`:**
    ```yaml
    apiVersion: v1
    kind: Namespace
    metadata:
-     name: dev-my-api
+     name: my-api
      labels:
        istio.io/dataplane-mode: ambient
        tier: application
    ```
-   *Note: You can also choose to add this to a central `platform` folder if you prefer global management.*
 
-2. **Create the application structure**:
-   ```bash
-   mkdir -p apps/my-api/{base,overlays/{dev,prod}}
-   ```
-
-2. **Create base manifests** in `apps/my-api/base/`:
-   ```yaml
-   # kustomization.yaml
-   apiVersion: kustomize.config.k8s.io/v1beta1
-   kind: Kustomization
-   resources:
-     - namespace.yaml
-     - deployment.yaml
-     - service.yaml
-     - configmap.yaml
-     - httproute.yaml
-   ```
-
-4. **Create HTTPRoute** in `apps/my-api/base/httproute.yaml` to expose it via Istio:
+   **`httproute.yaml`:**
    ```yaml
    apiVersion: gateway.networking.k8s.io/v1
    kind: HTTPRoute
    metadata:
      name: my-api-route
-     namespace: dev-my-api
+     namespace: my-api
    spec:
      parentRefs:
        - name: main-gateway
@@ -188,79 +169,62 @@ To add a new application (e.g., `my-api`):
            - name: my-api
              port: 80
    ```
-
-5. **Create environment overlays** in `apps/my-api/overlays/dev/`:
-   Ensure the `namespace` field matches the one created in step 1.
+   
+   **`kustomization.yaml`:**
    ```yaml
-   # kustomization.yaml
    apiVersion: kustomize.config.k8s.io/v1beta1
    kind: Kustomization
-   bases:
-     - ../../base
-   namespace: dev-my-api
-   commonLabels:
-     environment: dev
+   resources:
+     - namespace.yaml
+     - deployment.yaml
+     - service.yaml
+     - httproute.yaml
    ```
 
-6. **Register the app** in `apps/kustomization.yaml`:
+3. **Register the app** in `apps/kustomization.yaml`:
    ```yaml
    resources:
-     - demo-app/base/kustomization.yaml
-     - my-api/base/kustomization.yaml  # Add this line
+     # - demo-app # Example app (Commented out)
+     - my-api     # Your new app
    ```
 
-7. **Commit and push**:
+4. **Commit and push**:
    ```bash
    git add .
-   git commit -m "Add my-api application and its landing zone"
+   git commit -m "Add my-api application"
    git push
    ```
 
-ArgoCD will automatically detect the new namespace and the application.
+ArgoCD will automatically detect the new application.
 
-### 2. Deploying to Different Environments
+### 2. Updating Configuration (ConfigMaps/Secrets)
 
-#### Deploy to Development
-The `dev` overlay is automatically synced by the `workloads` Application. Just push changes to the `main` branch.
+#### Update a ConfigMap
 
-#### Deploy to Production
-To deploy to production, you have two options:
+1. **Edit the ConfigMap** in `apps/demo-app/configmap.yaml`:
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: demo-app-config
+   data:
+     app.properties: |
+       version=2.0  # Changed from 1.0
+       feature.enabled=true  # New property
+   ```
 
-**Option A: Separate ArgoCD Application (Recommended)**
+2. **Commit and push**:
+   ```bash
+   git add apps/demo-app/configmap.yaml
+   git commit -m "Update demo-app config to v2.0"
+   git push
+   ```
 
-Create `bootstrap/argocd-apps/workloads-prod.yaml`:
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: workloads-prod
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/medaqueno/k8s-lab-gitops.git
-    targetRevision: main
-    path: apps
-  destination:
-    server: https://kubernetes.default.svc
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: false  # Manual approval for prod
-```
+3. **Verify sync**:
+   ```bash
+   kubectl get configmap -n demo-app demo-app-config -o yaml
+   ```
 
-**Option B: Use Kustomize Overlays**
-
-Modify your app's overlay to point to `prod`:
-```bash
-# In apps/my-api/overlays/prod/kustomization.yaml
-namespace: prod-my-api
-commonLabels:
-  environment: prod
-replicas:
-  - name: my-api
-    count: 3
-```
 
 ### 3. Updating Configuration (ConfigMaps/Secrets)
 
