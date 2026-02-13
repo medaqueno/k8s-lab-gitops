@@ -41,7 +41,7 @@ kubectl get applications -n argocd
 | NAME | SYNC STATUS | HEALTH STATUS | DESCRIPTION |
 | :--- | :--- | :--- | :--- |
 | **bootstrap** | `Synced` | `Healthy` | The root app that manages everything else. |
-| **platform** | `Synced` | `Progressing` | Installs Istio & System components. (See "Known Issues" below). |
+| **platform** | `Synced` | `Healthy` | Installs Istio & System components. |
 | **workloads** | `Synced` | `Healthy` | Manages your demo applications. |
 
 ---
@@ -226,37 +226,9 @@ ArgoCD will automatically detect the new application.
    ```
 
 
-### 3. Updating Configuration (ConfigMaps/Secrets)
-
-#### Update a ConfigMap
-
-1. **Edit the ConfigMap** in `apps/demo-app/base/configmap.yaml`:
-   ```yaml
-   apiVersion: v1
-   kind: ConfigMap
-   metadata:
-     name: demo-app-config
-   data:
-     app.properties: |
-       version=2.0  # Changed from 1.0
-       feature.enabled=true  # New property
-   ```
-
-2. **Commit and push**:
-   ```bash
-   git add apps/demo-app/base/configmap.yaml
-   git commit -m "Update demo-app config to v2.0"
-   git push
-   ```
-
-3. **Verify sync**:
-   ```bash
-   kubectl get configmap -n dev-demo-app demo-app-config -o yaml
-   ```
-
 #### Add a Secret
 
-1. **Create the secret manifest** in `apps/my-api/base/secret.yaml`:
+1. **Create the secret manifest** in `apps/my-api/secret.yaml`:
    ```yaml
    apiVersion: v1
    kind: Secret
@@ -269,7 +241,7 @@ ArgoCD will automatically detect the new application.
 
 2. **Add to kustomization**:
    ```yaml
-   # apps/my-api/base/kustomization.yaml
+   # apps/my-api/kustomization.yaml
    resources:
      - deployment.yaml
      - service.yaml
@@ -369,26 +341,28 @@ argocd app get workloads
 kubectl logs -n argocd -l app.kubernetes.io/name=argocd-application-controller
 ```
 
-### 1. "Platform" App stuck in `Progressing`
-*   **Cause**: The Istio Ingress Gateway requests a `LoadBalancer` service. Since we don't have a Cloud Provider, the external IP remains `<pending>`.
-*   **Impact**: ArgoCD waits for the IP to be assigned, so the app never reaches `Healthy`.
-*   **Solution**: This is expected behavior. You can ignore it or:
-    1. **Install MetalLB** to provide local IPs
-    2. **Ignore Health Check**: Configure ArgoCD to ignore the `status.loadBalancer` field for Services.
-    3. **Use NodePort**: Patch the generated Service to be `type: NodePort`.
-
-### 2. Ztunnel Access Denied / FailedCreate
+### 1. Ztunnel Access Denied / FailedCreate
 *   **Cause**: Istio Ambient's `ztunnel` needs to modify network tables on the host, requiring privileged access.
 *   **Solution**: Ensure your namespace has the correct pod security label (handled by our configuration):
     ```yaml
     pod-security.kubernetes.io/enforce: privileged
     ```
-This is already included in `platform/istio/base/namespace.yaml`.
+This is already included in `platform/istio/namespace.yaml`.
+
+### 2. Networking and Access (LoadBalancer vs NodePort)
+In "Bare Metal" environments (like this home lab), the Istio Gateway defaults to a `LoadBalancer` service type.
+
+*   **The Problem**: Without a cloud provider (AWS, Azure) or a local controller (like MetalLB), the service remains in `Progressing` status because Kubernetes cannot assign an external IP.
+*   **Our Solution**: We forced the use of **NodePort** via an annotation in `platform/istio/gateway.yaml`. This allows access to applications using the IP of any cluster node and a specific port.
+*   **Future Alternatives**:
+    1. **MetalLB**: Can be installed in the cluster to assign real local network IPs to `LoadBalancer` services.
+    2. **Cloud Providers**: In a production environment, this service would receive a public IP automatically.
+
 
 ### 3. Check Kustomize Build Locally
 To verify the output before committing:
 ```bash
-kustomize build apps/demo-app/overlays/dev
+kustomize build apps/demo-app
 ```
 
 ---
