@@ -3,6 +3,9 @@ kind: Gateway
 metadata:
   name: main-gateway
   namespace: istio-system
+  annotations:
+    # To avoid 'progressing' status for not having an External IP (LoadBalancer) or MetalLB or cloud provider
+    networking.istio.io/service-type: NodePort
 spec:
   gatewayClassName: istio
   listeners:
